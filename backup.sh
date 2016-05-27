@@ -51,9 +51,8 @@ set | grep PG
 #done
 
 BACKUP_FILENAME=${BACKUP_DIR}/${PG_BACKUP_DB}.${CURRENT_DATE}.${CURRENT_TIME}.sql.bz2
-echo "pg_dump -cOx ${PG_BACKUP_DB} ${PG_BACKUP_TABLE_OPTIONS} | nice pbzip2 >${BACKUP_FILENAME}"
 pg_dump -cOx ${PG_BACKUP_DB} ${PG_BACKUP_TABLE_OPTIONS} | nice pbzip2 >${BACKUP_FILENAME}
 
-echo "/usr/local/bin/s3cmd --access_key=${AWS_ACCESS_KEY} --secret_key=${AWS_SECRET_KEY} put ${BACKUP_FILENAME} ${AWS_BACKUP_DIR}"
-/usr/local/bin/s3cmd --progress --access_key=${AWS_ACCESS_KEY} --secret_key=${AWS_SECRET_KEY} put ${BACKUP_FILENAME} ${AWS_BACKUP_DIR}
-#/usr/local/bin/s3cmd --access_key=${AWS_ACCESS_KEY} --secret_key=${AWS_SECRET_KEY} --no-progress put ${BACKUP_FILENAME} ${AWS_BACKUP_DIR}
+/usr/local/bin/s3cmd --access_key=${AWS_ACCESS_KEY} --secret_key=${AWS_SECRET_KEY} --no-progress put ${BACKUP_FILENAME} ${AWS_BACKUP_DIR}
+echo done
+
