@@ -9,6 +9,7 @@ CURRENT_DATE=`date +%Y-%m-%d`
 CURRENT_TIME=`date +%H`
 #MONTH=$(date +%B)
 #YEAR=$(date +%Y)
+S3CMD=/usr/local/bin/s3cmd
 
 if [ -z "${BACKUP_BASE_DIR}" ]; then
   BACKUP_BASE_DIR=/backups
@@ -29,6 +30,13 @@ if [ -z "${AWS_BACKUP_DIR}" ]; then
   exit 1
 fi
 
+if [ -z "${AWS_SIGNURL_TIMEOUT}" ]; then
+  AWS_SIGNURL_TIMEOUT=100000   # 86400 seconds is a 24h-day
+fi
+
+if [ -z "${SMTP_BACKUP_TO}" ]; then
+  SMTP_BACKUP_TO=lev@headmade.pro
+fi
 
 BACKUP_DIR=${BACKUP_BASE_DIR} #/${YEAR}/${MONTH}
 mkdir -p ${BACKUP_DIR}
@@ -50,9 +58,17 @@ set | grep PG
   #pg_dump -cOx -i -Fc -f ${FILENAME} ${DB}
 #done
 
-BACKUP_FILENAME=${BACKUP_DIR}/${PG_BACKUP_DB}.${CURRENT_DATE}.${CURRENT_TIME}.sql.bz2
-pg_dump -cOx ${PG_BACKUP_DB} ${PG_BACKUP_TABLE_OPTIONS} | nice pbzip2 >${BACKUP_FILENAME}
+BACKUP_FILENAME=${PG_BACKUP_DB}.${CURRENT_DATE}.${CURRENT_TIME}.sql.bz2
+BACKUP_PATH=${BACKUP_DIR}/${PG_BACKUP_DB}.${CURRENT_DATE}.${CURRENT_TIME}.sql.bz2
 
-/usr/local/bin/s3cmd --access_key=${AWS_ACCESS_KEY} --secret_key=${AWS_SECRET_KEY} --no-progress put ${BACKUP_FILENAME} ${AWS_BACKUP_DIR}
+echo "Dumping and compressing ${PG_BACKUP_DB}..."
+pg_dump -cOx ${PG_BACKUP_DB} ${PG_BACKUP_TABLE_OPTIONS} | nice pbzip2 >${BACKUP_PATH}
+
+echo "Uploading to ${AWS_BACKUP_DIR}..."
+${S3CMD} --access_key=${AWS_ACCESS_KEY} --secret_key=${AWS_SECRET_KEY} --no-progress put ${BACKUP_PATH} ${AWS_BACKUP_DIR}
+
+echo "Sending email to ${SMTP_BACKUP_TO}..."
+${S3CMD} signurl ${AWS_BACKUP_DIR}${BACKUP_FILENAME} +${AWS_SIGNURL_TIMEOUT} | mailx -v -r ${SMTP_USER} -s "${SMTP_SUBJECT_PREFIX}${BACKUP_FILENAME}" -S smtp=${SMTP_URL} -S smtp-use-starttls -S smtp-auth=login -S ssl-verify=ignore -S smtp-auth-user=${SMTP_USER} -S smtp-auth-password="${SMTP_PASSWORD}" ${SMTP_BACKUP_TO}
+
+sleep 10 # so email can get delivered
 echo done
-

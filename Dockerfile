@@ -18,16 +18,16 @@ RUN set -x \
   && gosu nobody true \
   && apt-get purge -y --auto-remove ca-certificates wget \
   \
-  && apt-get install -y locales && rm -rf /var/lib/apt/lists/* \
+  && apt-get update && apt-get install -y locales && rm -rf /var/lib/apt/lists/* \
   && localedef  -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8 \
   && localedef  -i ru_RU -c -f UTF-8 -A /usr/share/locale/locale.alias ru_RU.UTF-8 \
   \
   && apt-key adv --keyserver ha.pool.sks-keyservers.net --recv-keys B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8 \
   && echo 'deb http://apt.postgresql.org/pub/repos/apt/ jessie-pgdg main' $PG_MAJOR > /etc/apt/sources.list.d/pgdg.list \
   \
-  && apt-get install -y postgresql-client \
+  && apt-get update && apt-get install -y postgresql-client \
   \
-  && apt-get update && apt-get install -y cron pbzip2 python-pip \
+  && apt-get update && apt-get install -y cron pbzip2 python-pip heirloom-mailx wget \
   && pip install s3cmd \
   && touch /var/log/cron.log \
   && touch /var/log/backup.log
@@ -35,9 +35,11 @@ RUN set -x \
 ENV LANG en_US.utf8
 ENV PATH /usr/lib/postgresql/$PG_MAJOR/bin:$PATH
 
-COPY create_env.sh /create_env.sh
-COPY start.sh /start.sh
-COPY backup.sh /backup.sh
+# 1) cron doesn't forward its invocation environment to cron tasks,
+#    so we use create_env.sh to store it to initially empty env.sh
+# 2) when we run the container with /backup.sh command as entry-point,
+#    its wnvironment is ready (so empty env.sh is ok)
+COPY create_env.sh start.sh backup.sh restore.sh env.sh /
 
 CMD ["/start.sh"]
 
