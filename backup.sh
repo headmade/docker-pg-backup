@@ -58,11 +58,16 @@ set | grep PG
   #pg_dump -cOx -i -Fc -f ${FILENAME} ${DB}
 #done
 
-BACKUP_FILENAME=${PG_BACKUP_DB}.${CURRENT_DATE}.${CURRENT_TIME}.sql.bz2
-BACKUP_PATH=${BACKUP_DIR}/${PG_BACKUP_DB}.${CURRENT_DATE}.${CURRENT_TIME}.sql.bz2
+BACKUP_EXT=sql.bz2
+BACKUP_FILENAME=${PG_BACKUP_DB}.${CURRENT_DATE}.${CURRENT_TIME}.${BACKUP_EXT}
+
+BACKUP_PATH=${BACKUP_DIR}/${BACKUP_FILENAME}
 
 echo "Dumping and compressing ${PG_BACKUP_DB}..."
-pg_dump -cOx ${PG_BACKUP_DB} ${PG_BACKUP_TABLE_OPTIONS} | nice pbzip2 >${BACKUP_PATH}
+rm -f ${BACKUP_DIR}/*.${BACKUP_EXT}
+(pg_dump -cOx --schema-only ${PG_BACKUP_DB} ; \
+  pg_dump -Ox --data-only ${PG_BACKUP_DB} ${PG_BACKUP_TABLE_OPTIONS} ; \
+  echo "select 'refresh materialized view ' || matviewname || ';' from pg_matviews;" | psql ${PG_BACKUP_DB} | egrep -v 'column|row' ) | nice pbzip2 >${BACKUP_PATH}
 
 echo "Uploading to ${AWS_BACKUP_DIR}..."
 ${S3CMD} --access_key=${AWS_ACCESS_KEY} --secret_key=${AWS_SECRET_KEY} --no-progress put ${BACKUP_PATH} ${AWS_BACKUP_DIR}
@@ -70,5 +75,7 @@ ${S3CMD} --access_key=${AWS_ACCESS_KEY} --secret_key=${AWS_SECRET_KEY} --no-prog
 echo "Sending email to ${SMTP_BACKUP_TO}..."
 ${S3CMD} signurl ${AWS_BACKUP_DIR}${BACKUP_FILENAME} +${AWS_SIGNURL_TIMEOUT} | mailx -v -r ${SMTP_USER} -s "${SMTP_SUBJECT_PREFIX}${BACKUP_FILENAME}" -S smtp=${SMTP_URL} -S smtp-use-starttls -S smtp-auth=login -S ssl-verify=ignore -S smtp-auth-user=${SMTP_USER} -S smtp-auth-password="${SMTP_PASSWORD}" ${SMTP_BACKUP_TO}
 
+date
 sleep 10 # so email can get delivered
-echo done
+echo Done
+
