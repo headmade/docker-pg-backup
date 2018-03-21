@@ -1,8 +1,8 @@
 # vim:set ft=dockerfile:
 FROM debian:jessie
 
-ENV PG_MAJOR 9.6
-ENV PG_VERSION 9.6.0
+ENV PG_MAJOR 10
+ENV PG_VERSION 10.2
 
 # grab gosu for easy step-down from root
 ENV GOSU_VERSION 1.7
