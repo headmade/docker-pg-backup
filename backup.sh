@@ -69,11 +69,14 @@ rm -f ${BACKUP_DIR}/*.${BACKUP_EXT}
   pg_dump -Ox --data-only ${PG_BACKUP_DB} ${PG_BACKUP_TABLE_OPTIONS} ; \
   echo "select 'refresh materialized view ' || matviewname || ';' from pg_matviews;" | psql ${PG_BACKUP_DB} | egrep -v 'column|row' ) | nice pbzip2 >${BACKUP_PATH}
 
+BACKUP_SIZE=`ls -l ${BACKUP_PATH} | cut -d\  -f5`
+BACKUP_SIZE_HUMAN=`ls -lh ${BACKUP_PATH} | cut -d\  -f5`
+
 echo "Uploading to ${AWS_BACKUP_DIR}..."
 ${S3CMD} --access_key=${AWS_ACCESS_KEY} --secret_key=${AWS_SECRET_KEY} --no-progress put ${BACKUP_PATH} ${AWS_BACKUP_DIR}
 
 echo "Sending email to ${SMTP_BACKUP_TO}..."
-${S3CMD} signurl ${AWS_BACKUP_DIR}${BACKUP_FILENAME} +${AWS_SIGNURL_TIMEOUT} | mailx -v -r ${SMTP_USER} -s "${SMTP_SUBJECT_PREFIX}${BACKUP_FILENAME}" -S smtp=${SMTP_URL} -S smtp-use-starttls -S smtp-auth=login -S ssl-verify=ignore -S smtp-auth-user=${SMTP_USER} -S smtp-auth-password="${SMTP_PASSWORD}" ${SMTP_BACKUP_TO}
+(echo ${BACKUP_SIZE_HUMAN}; ls -l ${BACKUP_PATH}; echo ''; ${S3CMD} signurl ${AWS_BACKUP_DIR}${BACKUP_FILENAME} +${AWS_SIGNURL_TIMEOUT}) | mailx -v -r ${SMTP_USER} -s "${SMTP_SUBJECT_PREFIX}${BACKUP_FILENAME} ${BACKUP_SIZE_HUMAN} ${BACKUP_SIZE}" -S smtp=${SMTP_URL} -S smtp-use-starttls -S smtp-auth=login -S ssl-verify=ignore -S smtp-auth-user=${SMTP_USER} -S smtp-auth-password="${SMTP_PASSWORD}" ${SMTP_BACKUP_TO}
 
 date
 sleep 10 # so email can get delivered
