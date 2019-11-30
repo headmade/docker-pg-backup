@@ -1,3 +1,3 @@
 #!/bin/bash
-docker build -t hedmade/docker-pg-backup:10 .
+docker build -t hedmade/docker-pg-backup:12 .
 

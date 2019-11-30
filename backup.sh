@@ -65,8 +65,7 @@ BACKUP_PATH=${BACKUP_DIR}/${BACKUP_FILENAME}
 
 echo "Dumping and compressing ${PG_BACKUP_DB}..."
 rm -f ${BACKUP_DIR}/*.${BACKUP_EXT}
-(pg_dump -cOx --schema-only ${PG_BACKUP_DB} ; \
-  pg_dump -Ox --data-only ${PG_BACKUP_DB} ${PG_BACKUP_TABLE_OPTIONS} ; \
+(pg_dump -cOx ${PG_BACKUP_DB} ${PG_BACKUP_TABLE_OPTIONS} ; \
   echo "select 'refresh materialized view ' || matviewname || ';' from pg_matviews;" | psql ${PG_BACKUP_DB} | egrep -v 'column|row' ) | nice pbzip2 >${BACKUP_PATH}
 
 BACKUP_SIZE=`ls -l ${BACKUP_PATH} | cut -d\  -f5`

@@ -20,8 +20,8 @@ RUN set -x \
   && gosu nobody true \
   && apt-get purge -y --auto-remove ca-certificates wget
 
-ENV PG_MAJOR 11
-ENV PG_VERSION 11.1
+ENV PG_MAJOR 12
+ENV PG_VERSION 12.1
 
 RUN apt-key adv --keyserver ha.pool.sks-keyservers.net --recv-keys B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8 \
   && echo 'deb http://apt.postgresql.org/pub/repos/apt/ jessie-pgdg main' $PG_MAJOR > /etc/apt/sources.list.d/pgdg.list \
